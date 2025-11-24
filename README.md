@@ -140,3 +140,17 @@ The AI will automatically:
 - [x] **Phase 3: Antigravity Compliance** (Rules, Artifacts)
 - [x] **Phase 4: Advanced Memory** (Summary Buffer Implemented ✅)
 - [x] **Phase 5: Cognitive Architecture** (Generic Tool Dispatch Implemented ✅)
+## 👥 Contributors
+
+A massive thank you to the community members who help build this project:
+
+- [@devalexanderdaza](https://github.com/devalexanderdaza) 💻 **(First Contributor!)**
+  - Implemented demo tools script and enhanced agent functionality.
+
+**Want to contribute?** Check out our [Issues](https://github.com/study8677/antigravity-workspace-template/issues) page!
+## 💡 Call for Ideas: Swarm Protocol
+
+We value **ideas** as much as code! 
+We are currently brainstorming the architecture for **Phase 6: Multi-Agent Swarm**. If you provide a solid architectural suggestion or a detailed design that gets adopted, **you will be added to our README as a Contributor**.
+
+Don't hesitate to share your thoughts in the [Issues](https://github.com/study8677/antigravity-workspace-template/issues), even if you don't have time to write the implementation.

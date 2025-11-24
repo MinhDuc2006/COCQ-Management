@@ -140,3 +140,17 @@ AI 会自动：
 - [x] **阶段 3：Antigravity 合规**（规则、产物）
 - [x] **阶段 4：高级记忆**（摘要缓冲实现 ✅）
 - [x] **阶段 5：认知架构**（通用工具分发实现 ✅）
+## 👥 贡献者
+
+特别感谢参与本项目建设的社区成员：
+
+- [@devalexanderdaza](https://github.com/devalexanderdaza) 💻 **(首位贡献者!)**
+  - 实现了演示工具脚本，并增强了 Agent 的功能集成。
+
+**想要参与贡献？** 请查看我们的 [Issues](https://github.com/study8677/antigravity-workspace-template/issues) 页面！
+## 💡 征集创意：Swarm 协议
+
+我们像重视代码一样重视**创意 (Ideas)**！
+我们目前正在为 **第六阶段：多智能体 Swarm** 进行架构头脑风暴。如果您能提供可靠的架构建议或详细设计并被采纳，**您将被列入我们的 README 贡献者名单**。
+
+即使您没有时间编写实现代码，也请随时在 [Issues](https://github.com/study8677/antigravity-workspace-template/issues) 中分享您的想法。

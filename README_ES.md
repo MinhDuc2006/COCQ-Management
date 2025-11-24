@@ -140,3 +140,17 @@ La IA automáticamente:
 - [x] **Fase 3: Cumplimiento Antigravity** (Reglas, Artefactos)
 - [x] **Fase 4: Memoria Avanzada** (Buffer de Resumen Implementado ✅)
 - [x] **Fase 5: Arquitectura Cognitiva** (Despacho Genérico de Herramientas Implementado ✅)
+## 👥 Colaboradores
+
+Un agradecimiento especial a los miembros de la comunidad que han contribuido a este proyecto:
+
+- [@devalexanderdaza](https://github.com/devalexanderdaza) 💻 **(¡Primer Colaborador!)**
+  - Implementó scripts de herramientas de demostración y mejoró la funcionalidad del agente.
+
+**¿Quieres contribuir?** ¡Revisa nuestra página de [Issues](https://github.com/study8677/antigravity-workspace-template/issues)!
+## 💡 Llamada a Ideas: Protocolo Swarm
+
+¡Valoramos las **ideas** tanto como el código!
+Actualmente estamos ideando la arquitectura para la **Fase 6: Swarm Multi-Agente**. Si proporcionas una sugerencia arquitectónica sólida o un diseño detallado que sea adoptado, **serás añadido a nuestro README como Colaborador**.
+
+No dudes en compartir tus pensamientos en los [Issues](https://github.com/study8677/antigravity-workspace-template/issues), incluso si no tienes tiempo para escribir la implementación.
