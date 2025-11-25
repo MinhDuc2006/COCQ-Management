@@ -153,6 +153,42 @@ The AI will automatically:
 - [x] **Phase 3: Antigravity Compliance** (Rules, Artifacts)
 - [x] **Phase 4: Advanced Memory** (Summary Buffer Implemented ✅)
 - [x] **Phase 5: Cognitive Architecture** (Generic Tool Dispatch Implemented ✅)
+- [x] **Phase 6: Dynamic Discovery** (Auto Tool & Context Loading ✅)
+
+## 🔥 New: True Zero-Config Tool & Context Loading
+
+**No more manual imports!** The agent now automatically discovers:
+
+### 🛠️ Auto Tool Discovery
+Drop any Python file into `src/tools/` and the agent instantly knows how to use it:
+
+```python
+# src/tools/my_custom_tool.py
+def analyze_sentiment(text: str) -> str:
+    """Analyzes the sentiment of given text.
+    
+    Args:
+        text: The text to analyze.
+        
+    Returns:
+        Sentiment score and analysis.
+    """
+    # Your implementation
+    return "Positive sentiment detected!"
+```
+
+**That's it!** No need to edit `agent.py`. Just restart and the tool is available.
+
+### 📚 Auto Context Loading
+Add knowledge files to `.context/` and they're automatically injected:
+
+```bash
+echo "# Project Rules\nUsefriendly language." > .context/project_rules.md
+```
+
+The agent will follow these rules immediately on next run.
+
+
 ## 👥 Contributors
 
 A massive thank you to the community members who help build this project:

@@ -2,19 +2,15 @@ import json
 import time
 import os
 import sys
+import inspect
+import importlib.util
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from google import genai
 
 from src.config import settings
 from src.memory import MemoryManager
-from src.tools.example_tool import (
-    get_stock_price,
-    web_search,
-    calculate_math,
-    get_weather,
-    send_email,
-)
 
 
 class GeminiAgent:
@@ -26,16 +22,10 @@ class GeminiAgent:
     def __init__(self):
         self.settings = settings
         self.memory = MemoryManager()
-        # Register tools here to make them available to the agent.
-        # To add a new tool, import it above and append to this mapping.
-        self.available_tools: Dict[str, Callable[..., Any]] = {
-            "get_stock_price": get_stock_price,
-            "web_search": web_search,
-            "calculate_math": calculate_math,
-            "get_weather": get_weather,
-            "send_email": send_email,
-        }
+        # Dynamically load all tools from src/tools/ directory
+        self.available_tools: Dict[str, Callable[..., Any]] = self._load_tools()
         print(f"🤖 Initializing {self.settings.AGENT_NAME} with model {self.settings.GEMINI_MODEL_NAME}...")
+        print(f"   📦 Discovered {len(self.available_tools)} tools: {', '.join(self.available_tools.keys())}")
         # Initialize the GenAI client if credentials are available. Some test
         # environments do not provide a Google API key, so fall back to a
         # lightweight dummy client that returns a canned response. This keeps
@@ -73,6 +63,90 @@ class GeminiAgent:
                         self.models = self._Models()
 
                 self.client = _DummyClientFallback()
+
+    def _load_tools(self) -> Dict[str, Callable[..., Any]]:
+        """
+        Automatically discover and load tools from src/tools/ directory.
+        
+        Scans the tools directory for Python modules, imports them dynamically,
+        and registers any public functions (not starting with _) as available tools.
+        This enables the "zero-config" philosophy - just drop a Python file into
+        src/tools/ and it becomes available to the agent.
+        
+        Returns:
+            Dictionary mapping tool names to callable functions.
+        """
+        tools = {}
+        
+        # Get the src/tools directory path relative to this file
+        tools_dir = Path(__file__).parent / "tools"
+        
+        if not tools_dir.exists():
+            print(f"⚠️ Tools directory not found: {tools_dir}")
+            return tools
+        
+        # Iterate through all Python files in the tools directory
+        for tool_file in tools_dir.glob("*.py"):
+            # Skip __init__.py and private modules
+            if tool_file.name.startswith("_"):
+                continue
+            
+            module_name = tool_file.stem
+            
+            try:
+                # Dynamically import the module
+                spec = importlib.util.spec_from_file_location(
+                    f"src.tools.{module_name}",
+                    tool_file
+                )
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    
+                    # Find all public functions in the module
+                    for name, obj in inspect.getmembers(module, inspect.isfunction):
+                        # Only register public functions defined in this module
+                        if not name.startswith("_") and obj.__module__ == f"src.tools.{module_name}":
+                            tools[name] = obj
+                            print(f"   ✓ Loaded tool: {name} from {module_name}.py")
+            
+            except Exception as e:
+                print(f"   ⚠️ Failed to load tools from {tool_file.name}: {e}")
+        
+        return tools
+    
+    def _load_context(self) -> str:
+        """
+        Automatically load and concatenate all markdown files from .context/ directory.
+        
+        This allows users to add project-specific knowledge, coding standards, or
+        custom rules by simply dropping .md files into .context/. The content is
+        automatically injected into the agent's system prompt.
+        
+        Returns:
+            Concatenated content of all .md files in .context/ directory.
+        """
+        context_parts = []
+        
+        # Get the .context directory path relative to project root
+        # Navigate up from src/ to project root
+        context_dir = Path(__file__).parent.parent / ".context"
+        
+        if not context_dir.exists():
+            return ""
+        
+        # Load all markdown files
+        for context_file in sorted(context_dir.glob("*.md")):
+            try:
+                content = context_file.read_text(encoding="utf-8")
+                context_parts.append(f"\n--- {context_file.name} ---\n{content}")
+            except Exception as e:
+                print(f"   ⚠️ Failed to load context from {context_file.name}: {e}")
+        
+        if context_parts:
+            print(f"   📚 Loaded context from {len(context_parts)} file(s)")
+        
+        return "\n".join(context_parts)
 
     def _get_tool_descriptions(self) -> str:
         """
@@ -169,7 +243,15 @@ class GeminiAgent:
         """
         Simulates the 'Deep Think' process of Gemini 3.
         """
-        system_prompt = "You are a focused agent following the Artifact-First protocol. Stay concise and tactical."
+        # Load context knowledge from .context/ directory
+        context_knowledge = self._load_context()
+        
+        # Inject context into system prompt
+        system_prompt = (
+            f"{context_knowledge}\n\n"
+            "You are a focused agent following the Artifact-First protocol. Stay concise and tactical."
+        )
+        
         context_window = self.memory.get_context_window(
             system_prompt=system_prompt,
             max_messages=10,
