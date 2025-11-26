@@ -152,14 +152,15 @@ La IA automáticamente:
 - [x] **Fase 1: Fundación** (Andamiaje, Configuración, Memoria)
 - [x] **Fase 2: DevOps** (Docker, CI/CD)
 - [x] **Fase 3: Cumplimiento Antigravity** (Reglas, Artefactos)
-- [x] **Fase 4: Memoria Avanzada** (Buffer de Resumen Implementado ✅)
-- [x] **Fase 5: Arquitectura Cognitiva** (Despacho Genérico de Herramientas Implementado ✅)
+
 ## 👥 Colaboradores
 
 Un agradecimiento especial a los miembros de la comunidad que han contribuido a este proyecto:
 
 - [@devalexanderdaza](https://github.com/devalexanderdaza) 💻 **(¡Primer Colaborador!)**
   - Implementó scripts de herramientas de demostración y mejoró la funcionalidad del agente.
+- [@Subham-KRLX](https://github.com/Subham-KRLX) 💻
+  - Se agregaron herramientas dinámicas y carga de contexto (Arregla #4)
 
 **¿Quieres contribuir?** ¡Revisa nuestra página de [Issues](https://github.com/study8677/antigravity-workspace-template/issues)!
 ## 💡 Llamada a Ideas: Protocolo Swarm

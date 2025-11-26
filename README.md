@@ -188,13 +188,14 @@ echo "# Project Rules\nUsefriendly language." > .context/project_rules.md
 
 The agent will follow these rules immediately on next run.
 
-
 ## 👥 Contributors
 
 A massive thank you to the community members who help build this project:
 
 - [@devalexanderdaza](https://github.com/devalexanderdaza) 💻 **(First Contributor!)**
   - Implemented demo tools script and enhanced agent functionality.
+- [@Subham-KRLX](https://github.com/Subham-KRLX) 💻
+  - Added dynamic tools and context loading (Fixes #4)
 
 **Want to contribute?** Check out our [Issues](https://github.com/study8677/antigravity-workspace-template/issues) page!
 ## 💡 Call for Ideas: Swarm Protocol

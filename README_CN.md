@@ -152,14 +152,15 @@ AI 会自动：
 - [x] **阶段 1：基础**（脚手架、配置、记忆）
 - [x] **阶段 2：DevOps**（Docker、CI/CD）
 - [x] **阶段 3：Antigravity 合规**（规则、产物）
-- [x] **阶段 4：高级记忆**（摘要缓冲实现 ✅）
-- [x] **阶段 5：认知架构**（通用工具分发实现 ✅）
+
 ## 👥 贡献者
 
 特别感谢参与本项目建设的社区成员：
 
 - [@devalexanderdaza](https://github.com/devalexanderdaza) 💻 **(首位贡献者!)**
   - 实现了演示工具脚本，并增强了 Agent 的功能集成。
+- [@Subham-KRLX](https://github.com/Subham-KRLX) 💻
+  - 添加动态工具和上下文加载 (修复 #4)
 
 **想要参与贡献？** 请查看我们的 [Issues](https://github.com/study8677/antigravity-workspace-template/issues) 页面！
 ## 💡 征集创意：Swarm 协议
