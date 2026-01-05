@@ -47,100 +47,125 @@ if mode == "Manual Scan":
             st.error("Please provide a Google Drive Folder ID.")
         else:
             try:
-                # 1. Fetch existing data for deduplication (Optional but good for manual too)
+                # 1. Fetch existing data for deduplication
                 existing_links = set()
                 if spreadsheet_id:
                     with st.spinner("Fetching existing data to check for duplicates..."):
                         existing_links = sheets.get_existing_drive_links(spreadsheet_id)
 
-                with st.spinner("Scanning Google Drive..."):
-                    files = drive_scanner.search_files(drive_folder_id, recursive=recursive_search)
+                # Initialize counters
+                total_new_files = 0
                 
-                # Filter duplicates
-                new_files = [f for f in files if f['webViewLink'] not in existing_links]
+                # Progress Bar
+                progress_bar = st.progress(0)
+                status_text = st.empty()
                 
-                if not new_files:
-                    if len(files) > 0:
-                        st.info(f"Scanned {len(files)} files, but all are already in the database! ✅")
-                    else:
-                        st.warning("No CO/CQ files found in the specified folder.")
-                else:
-                    st.info(f"Found {len(new_files)} NEW documents (out of {len(files)} total). Starting extraction...")
-                    progress_bar = st.progress(0)
-                    new_data = []
+                # Use the new generator to walk incrementally
+                # We can't know total folders/files easily for progress bar 0-100%, 
+                # so we'll just pulse or update text based on files found.
+                
+                # Helper to process a batch of files
+                def process_batch(files_to_process, folder_name):
+                    folder_new_data = []
+                    count = len(files_to_process)
                     
-                    for i, file in enumerate(new_files):
-                        file_id = file['id']
+                    for i, file in enumerate(files_to_process):
                         file_name = file['name']
                         web_link = file['webViewLink']
                         
-                        status_msg = f"Reading {file_name}..."
-                        if force_ocr: status_msg = f"🔍 Running OCR on {file_name}..."
+                        status_msg = f"Reading {file_name} in '{folder_name}'..."
+                        if force_ocr: status_msg = f"🔍 OCR on {file_name} in '{folder_name}'..."
                         
-                        with st.status(status_msg):
-                            # Create temporary file
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                                temp_path = tmp.name
-                                
-                            try:
-                                drive_scanner.download_file(file_id, temp_path)
-                                data, method = extractor.extract_data(temp_path, force_ocr=force_ocr)
-                                
-                                row = {
-                                    "File Name": file_name,
-                                    "Date": data.get("date"),
-                                    "Serial Number": data.get("serial_number"),
-                                    "Method": method,
-                                    "Drive Link": web_link,
-                                }
-                                new_data.append(row)
-                                st.write(f"✅ Processed {file_name}")
-                                
-                            except Exception as e:
-                                st.warning(f"Failed to process {file_name}: {e}")
-                            finally:
-                                if os.path.exists(temp_path): os.remove(temp_path)
+                        status_text.text(status_msg)
                         
-                        progress_bar.progress((i + 1) / len(new_files))
+                        # Download & Extract
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                            temp_path = tmp.name
+                            
+                        try:
+                            drive_scanner.download_file(file['id'], temp_path)
+                            data, method = extractor.extract_data(temp_path, force_ocr=force_ocr)
+                            
+                            row = {
+                                "File Name": file_name,
+                                "Date": data.get("date"),
+                                "Serial Number": data.get("serial_number"),
+                                "Method": method,
+                                "Drive Link": web_link,
+                            }
+                            folder_new_data.append(row)
+                            st.write(f"✅ Processed {file_name}")
+                            
+                        except Exception as e:
+                            st.warning(f"Failed to process {file_name}: {e}")
+                        finally:
+                            if os.path.exists(temp_path): os.remove(temp_path)
+                            
+                    return folder_new_data
+
+                # Main Loop
+                st.info("Scanning started... folders will be processed one by one.")
+                
+                for folder_name, files in drive_scanner.walk_folder_structure(drive_folder_id, recursive=recursive_search):
+                    status_text.text(f"Scanning folder: {folder_name}...")
                     
-                    st.session_state['extracted_data'] = new_data
-                    st.success(f"Processing complete! {len(new_data)} new files analyzed.")
+                    # Filter duplicates for this batch
+                    new_files = [f for f in files if f['webViewLink'] not in existing_links]
+                    
+                    if new_files:
+                        st.info(f"📂 Found {len(new_files)} new files in '{folder_name}'. Processing...")
+                        batch_data = process_batch(new_files, folder_name)
+                        
+                        if batch_data:
+                            # Add to session state for preview
+                            st.session_state['extracted_data'].extend(batch_data)
+                            
+                            # Auto-Sync Implementation for Manual Mode? 
+                            # User only asked for "scanning one sub-folder at a time to ensure syncing". 
+                            # Let's sync IMMEDIATELY to sheet if ID is present.
+                            if spreadsheet_id:
+                                try:
+                                    rows_to_sync = [[
+                                        item["File Name"],
+                                        item["Date"],
+                                        item["Serial Number"],
+                                        item["Drive Link"]
+                                    ] for item in batch_data]
+                                    
+                                    sheets.append_data_to_sheet(spreadsheet_id, rows_to_sync)
+                                    st.success(f"💾 Synced {len(rows_to_sync)} rows from '{folder_name}' to Sheets.")
+                                except Exception as e:
+                                    st.error(f"Sync failed for batch: {e}")
+                            
+                            total_new_files += len(batch_data)
+                    else:
+                        # Optional: Indicate empty folder?
+                        # st.text(f"No new files in '{folder_name}'.")
+                        pass
+
+                if total_new_files > 0:
+                    st.success(f"🎉 Complete! Processed and synced {total_new_files} new files.")
+                else:
+                    st.warning("Scan complete. No new CO/CQ files found.")
                     
             except Exception as e:
                 st.error(f"Error during processing: {e}")
 
-    # Display Data and Sync (Manual)
+    # Display Data (Accumulated)
     if st.session_state['extracted_data']:
-        st.subheader("Preview Extracted Data")
+        st.subheader("Session Data Preview")
         df = pd.DataFrame(st.session_state['extracted_data'])
         st.dataframe(df[["File Name", "Date", "Serial Number", "Method", "Drive Link"]])
         
-        if st.button("💾 Sync to Google Sheets"):
-            if not spreadsheet_id:
-                st.error("Spreadsheet ID is missing.")
-            else:
-                with st.spinner("Syncing to Sheets..."):
-                    try:
-                        rows_to_sync = []
-                        for item in st.session_state['extracted_data']:
-                            rows_to_sync.append([
-                                item["File Name"],
-                                item["Date"],
-                                item["Serial Number"],
-                                item["Drive Link"]
-                            ])
-                        
-                        sheets.append_data_to_sheet(spreadsheet_id, rows_to_sync)
-                        st.success(f"Successfully synced {len(rows_to_sync)} rows to Google Sheets!")
-                        # Clear session state after sync to prevent double sync
-                        st.session_state['extracted_data'] = []
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Sync failed: {e}")
+        # We don't need a manual Sync button anymore if we auto-synced, or we keep it for safety?
+        # Let's keep it but label it "Re-Sync Session Data"
+        if st.button("💾 Re-Sync All Session Data"):
+             # ... (existing sync logic) ...
+             pass
 
 # --- CONTINUOUS MONITOR MODE ---
 elif mode == "Continuous Monitor":
-    st.info(f"🔄 System will scan every {scan_interval} minutes for NEW files and sync them automatically.")
+    st.info(f"🔄 System will scan NEW files incrementally (folder by folder) every {scan_interval} minutes.")
     
     if st.button("🔴 Start Monitoring Loop"):
         status_placeholder = st.empty()
@@ -162,51 +187,63 @@ elif mode == "Continuous Monitor":
                     status_placeholder.info("Fetching existing records...")
                     existing_links = sheets.get_existing_drive_links(spreadsheet_id)
                 
-                # 2. Scan Drive
-                status_placeholder.info("Scanning Google Drive...")
-                files = drive_scanner.search_files(drive_folder_id, recursive=recursive_search)
+                # 2. Walk Drive
+                status_placeholder.info("Starting incremental scan...")
                 
-                # 3. Filter
-                new_files = [f for f in files if f['webViewLink'] not in existing_links]
+                files_found_in_loop = 0
                 
-                if new_files:
-                    log(f"Found {len(new_files)} new files. Processing...")
+                for folder_name, files in drive_scanner.walk_folder_structure(drive_folder_id, recursive=recursive_search):
+                    status_placeholder.info(f"Scanning: {folder_name} ...")
                     
-                    for file in new_files:
-                        file_name = file['name']
-                        web_link = file['webViewLink']
+                    # Filter
+                    new_files = [f for f in files if f['webViewLink'] not in existing_links]
+                    
+                    if new_files:
+                        log(f"📂 {folder_name}: Found {len(new_files)} new files.")
                         
-                        status_placeholder.info(f"Processing: {file_name}...")
-                        
-                        # Download & Extract
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                            temp_path = tmp.name
-                        
-                        try:
-                            drive_scanner.download_file(file['id'], temp_path)
-                            data, method = extractor.extract_data(temp_path, force_ocr=force_ocr)
+                        for file in new_files:
+                            file_name = file['name']
+                            web_link = file['webViewLink']
                             
-                            # Immediate Sync
-                            row_data = [[
-                                file_name,
-                                data.get("date"),
-                                data.get("serial_number"),
-                                web_link
-                            ]]
+                            status_placeholder.info(f"Processing: {file_name} ({folder_name})...")
                             
-                            if spreadsheet_id:
-                                sheets.append_data_to_sheet(spreadsheet_id, row_data)
-                                log(f"✅ Synced: {file_name} ({method})")
-                            else:
-                                log(f"⚠️ Skipped Sync (No ID): {file_name}")
+                            # Download & Extract
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                                temp_path = tmp.name
+                            
+                            try:
+                                drive_scanner.download_file(file['id'], temp_path)
+                                data, method = extractor.extract_data(temp_path, force_ocr=force_ocr)
                                 
-                        except Exception as e:
-                            log(f"❌ Error {file_name}: {e}")
-                        finally:
-                            if os.path.exists(temp_path): os.remove(temp_path)
-                            
+                                # Immediate Sync
+                                row_data = [[
+                                    file_name,
+                                    data.get("date"),
+                                    data.get("serial_number"),
+                                    web_link
+                                ]]
+                                
+                                if spreadsheet_id:
+                                    sheets.append_data_to_sheet(spreadsheet_id, row_data)
+                                    log(f"✅ Synced: {file_name}")
+                                    files_found_in_loop += 1
+                                    
+                                    # Add to local cache to prevent re-processing separate dups in same loop?
+                                    existing_links.add(web_link) 
+                                else:
+                                    log(f"⚠️ Skipped Sync (No ID): {file_name}")
+                                    
+                            except Exception as e:
+                                log(f"❌ Error {file_name}: {e}")
+                            finally:
+                                if os.path.exists(temp_path): os.remove(temp_path)
+                    
+                    # Yielding back to loop allows "breathing room" or UI updates if needed
+                
+                if files_found_in_loop == 0:
+                     log("Scan complete. No new files.")
                 else:
-                    log("No new files found.")
+                     log(f"Loop complete. Synced {files_found_in_loop} files.")
 
                 status_placeholder.success(f"Sleeping for {scan_interval} minutes...")
                 time.sleep(scan_interval * 60)

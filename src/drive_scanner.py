@@ -12,17 +12,8 @@ def get_drive_service():
     _service_cache = build('drive', 'v3', credentials=creds)
     return _service_cache
 
-def search_files(folder_id=None, recursive=False):
-    """
-    Search for files matching specific naming conventions (CO, CQ, cocq)
-    and mime types (PDF, Images).
-    
-    Args:
-        folder_id: Optional ID of the folder to search in.
-        recursive: If True and folder_id is provided, search in subfolders as well.
-    """
-    service = get_drive_service()
-
+def _build_base_query(folder_id=None):
+    """Builds the file search query string."""
     # Mime types to look for
     mime_types = [
         "application/pdf", 
@@ -30,7 +21,6 @@ def search_files(folder_id=None, recursive=False):
         "image/png"
     ]
     
-    # Construct query
     # Name contains 'CO', 'CQ' or 'cocq'
     name_queries = [
         "name contains 'CO'",
@@ -46,11 +36,17 @@ def search_files(folder_id=None, recursive=False):
     
     if folder_id:
         query += f" and '{folder_id}' in parents"
+        
+    return query
 
+def _list_files_matching_criteria(folder_id):
+    """Lists files in a specific folder matching the app's criteria."""
+    service = get_drive_service()
+    query = _build_base_query(folder_id)
+    
     results = []
     page_token = None
     
-    # search current level
     while True:
         try:
             response = service.files().list(
@@ -69,22 +65,52 @@ def search_files(folder_id=None, recursive=False):
             if page_token is None:
                 break
         except Exception as e:
-            print(f"Error searching files: {e}")
+            print(f"Error listing files in {folder_id}: {e}")
             break
-            
-    # If recursive and we are targeting a specific folder, go deeper
-    if recursive and folder_id:
+    return results
+
+def get_folder_name(folder_id):
+    """Gets the name of a folder by ID."""
+    try:
+        service = get_drive_service()
+        file = service.files().get(fileId=folder_id, fields='name').execute()
+        return file.get('name', 'Unknown Folder')
+    except:
+        return 'Unknown Folder'
+
+def walk_folder_structure(folder_id, recursive=False):
+    """
+    Generator that yields (folder_name, files_list) for the given folder
+    and its subfolders (if recursive).
+    """
+    # 1. Yield current folder's files
+    current_files = _list_files_matching_criteria(folder_id)
+    folder_name = get_folder_name(folder_id)
+    
+    yield folder_name, current_files
+    
+    # 2. Recurse if needed
+    if recursive:
         subfolders = get_subfolders(folder_id)
         for sub in subfolders:
-            # Recursively search subfolders
-            # We don't catch all exceptions here to allow bubbling up or we can just print
-            try:
-                sub_results = search_files(sub['id'], recursive=True)
-                results.extend(sub_results)
-            except Exception as e:
-                print(f"Error recursive search in {sub.get('name', 'unknown')}: {e}")
-            
-    return results
+            yield from walk_folder_structure(sub['id'], recursive=True)
+
+def search_files(folder_id=None, recursive=False):
+    """
+    Legacy wrapper: Collects all results from walk_folder_structure into a single list.
+    """
+    all_files = []
+    # If no folder_id is provided, we can't really "walk" efficiently from root without ID.
+    # But filtering by parent needs an ID usually, unless we search whole drive.
+    # For backward compat, if folder_id is None, we search whole drive flat (not using parent query).
+    
+    if folder_id is None:
+        return _list_files_matching_criteria(None)
+        
+    for _, files in walk_folder_structure(folder_id, recursive):
+        all_files.extend(files)
+        
+    return all_files
 
 def get_subfolders(folder_id):
     """List all subfolders in a specific folder."""
@@ -173,10 +199,7 @@ def download_file(file_id, destination_path):
 if __name__ == '__main__':
     try:
         print("Searching for files...")
-        # Note: This will fail if credentials.json is not present and auth flow cannot start
-        files = search_files()
-        print(f"Found {len(files)} files.")
-        for file in files[:5]:
-            print(f"Found file: {file['name']} ({file['id']})")
+        # dumb test
+        pass
     except Exception as e:
         print(f"Error: {e}")
