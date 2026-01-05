@@ -9,3 +9,9 @@ requests
 # Install with: pip install 'mcp[cli]'
 # Or for just the core library: pip install mcp
 mcp[cli]>=1.0.0
+streamlit
+google-auth-oauthlib
+google-auth
+google-api-python-client
+pdfplumber
+pandas

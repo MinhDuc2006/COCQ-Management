@@ -41,3 +41,6 @@ venv.bak/
 logs/
 data/
 .opencode/
+credentials.json
+token.json
+app.log
