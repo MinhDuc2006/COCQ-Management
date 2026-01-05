@@ -4,7 +4,8 @@ import pandas as pd
 import re
 import logging
 from pdf2image import convert_from_path
-from src.utils import normalize_date
+from pdf2image import convert_from_path
+from src.utils import normalize_date, expand_serial_ranges, clean_serial_number
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -336,6 +337,12 @@ def extract_data(file_path, force_ocr=False):
 
     # 3. Final Formatting
     if isinstance(data.get("serial_number"), list):
+        # Clean serials (KO -> K0) BEFORE expansion
+        cleaned_serials = [clean_serial_number(s) for s in data["serial_number"]]
+        
+        # Expand ranges (e.g. 5087T159~5087T169 -> full list)
+        data["serial_number"] = expand_serial_ranges(cleaned_serials)
+        
         if data["serial_number"]:
             data["serial_number"] = "\n".join(list(dict.fromkeys(data["serial_number"])))
         else:

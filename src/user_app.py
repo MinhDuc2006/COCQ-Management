@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 from src import sheets
-from src.utils import normalize_date
+from src.utils import normalize_date, is_serial_in_range
 
 # Load environment variables
 load_dotenv()
@@ -52,8 +52,12 @@ if st.button("Search"):
                 filtered_df = df.copy()
                 
                 if serial_query:
-                    # Match case-insensitive and handle multi-line serial cells
-                    filtered_df = filtered_df[filtered_df["Serial Number"].str.contains(serial_query, case=False, na=False)]
+                    # Match case-insensitive and handle multi-line serial cells, also check ranges
+                    # Use 'apply' to check each cell against specialized logic
+                    # We pass the serial_query to the lambda
+                    filtered_df = filtered_df[filtered_df["Serial Number"].apply(
+                        lambda cell: is_serial_in_range(serial_query, str(cell))
+                    )]
                 
                 if date_query:
                     # Normalize user's query

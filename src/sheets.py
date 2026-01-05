@@ -115,3 +115,12 @@ def clear_sheet_data(spreadsheet_id):
     ).execute()
     
     return num_rows - 1  # Return number of data rows cleared
+
+def get_existing_drive_links(spreadsheet_id):
+    """
+    Returns a set of Drive Links that are already present in the sheet.
+    This is used to prevent re-scanning/re-adding the same file.
+    """
+    data = get_sheet_data(spreadsheet_id)
+    # Return a set of links. Filter out empty ones.
+    return {item.get("Drive Link") for item in data if item.get("Drive Link")}
